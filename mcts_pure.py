@@ -29,7 +29,8 @@ def policy_value_fn(board):
 
 
 class TreeNode(object):
-    """A node in the MCTS tree. Each node keeps track of its own value Q,
+    """
+    A node in the MCTS tree. Each node keeps track of its own value Q,
     prior probability P, and its visit-count-adjusted prior score u.
     """
 
@@ -47,7 +48,9 @@ class TreeNode(object):
         self._P = prior_p
 
     def expand(self, action_priors):
-        """Expand tree by creating new children.
+        """
+        Expansion: 
+        Expand tree by creating new children for leaf node.
         action_priors: a list of tuples of actions and their prior probability
             according to the policy function.
         """
@@ -56,17 +59,19 @@ class TreeNode(object):
                 self._children[action] = TreeNode(self, prob)
 
     def select(self, c_puct):
-        """Select action among children that gives maximum action value Q
-        plus bonus u(P).
+        """
+        Selection:
+        Select action among children that gives maximum UCT.
         Return: A tuple of (action, next_node)
         """
         return max(self._children.items(),
                    key=lambda act_node: act_node[1].get_value(c_puct))
 
     def update(self, leaf_value):
-        """Update node values from leaf evaluation.
-        leaf_value: the value of subtree evaluation from the current player's perspective.
-        -The update function is a very clever implementation of pure MCTS
+        """
+        Update node values from leaf evaluation.
+        leaf_value: the value of subtree evaluation from the current player's
+            perspective.
         """
         # Count visit.
         self._n_visits += 1
@@ -74,7 +79,9 @@ class TreeNode(object):
         self._Q += 1.0*(leaf_value - self._Q) / self._n_visits
 
     def update_recursive(self, leaf_value):
-        """Backpropagation: Like a call to update(), but applied recursively for all ancestors.
+        """
+        Backpropagation: 
+        Like a call to update(), but applied recursively for all ancestors.
         """
         # If it is not root, this node's parent should be updated first.
         if self._parent:
@@ -82,9 +89,9 @@ class TreeNode(object):
         self.update(leaf_value)
 
     def get_value(self, c_puct):
-        """Calculate and return the value for this node.
-        It is a combination of leaf evaluations Q, and this node's prior
-        adjusted for its visit count, u.
+        """
+        Calculate and return the UCT value for this node.
+        UCT value = leaf evaluations Q + this node's prior adjusted for its visit count
         c_puct: a number in (0, inf) controlling the relative impact of
             value Q, and prior probability P, on this node's score.
         """
@@ -93,7 +100,8 @@ class TreeNode(object):
         return self._Q + self._u
 
     def is_leaf(self):
-        """Check if leaf node (i.e. no nodes below this have been expanded).
+        """
+        Check if leaf node (i.e. no nodes below this have been expanded).
         """
         return self._children == {}
 
@@ -104,7 +112,7 @@ class TreeNode(object):
 class MCTS(object):
     """A simple implementation of Monte Carlo Tree Search."""
 
-    def __init__(self, policy_value_fn, c_puct=5, n_playout=10000):
+    def __init__(self, policy_value_fn, c_puct=5, n_playout=2000):
         """
         policy_value_fn: a function that takes in a board state and outputs
             a list of (action, probability) tuples and also a score in [-1, 1]
@@ -121,7 +129,8 @@ class MCTS(object):
         self._n_playout = n_playout
 
     def _playout(self, state):
-        """Selection: Run a single playout from the root to the leaf, getting a value at
+        """
+        Selection: Run a single playout from the root to the leaf, getting a value at
         the leaf and propagating it back through its parents.
         State is modified in-place, so a copy must be provided.
         """
@@ -145,7 +154,8 @@ class MCTS(object):
         node.update_recursive(-leaf_value)
 
     def _evaluate_rollout(self, state, limit=1000):
-        """Simulation: Use the rollout policy to play until the end of the game,
+        """
+        Simulation: Use the rollout policy to play until the end of the game,
         returning +1 if the current player wins, -1 if the opponent wins,
         and 0 if it is a tie.
         """
@@ -166,7 +176,8 @@ class MCTS(object):
             return 1 if winner == player else -1
 
     def get_move(self, state):
-        """MCTS decision: Runs all playouts sequentially and returns the most visited action.
+        """
+        MCTS decision: Runs all playouts sequentially and returns the most visited action.
         state: the current game state
 
         Return: the selected action
@@ -178,7 +189,8 @@ class MCTS(object):
                    key=lambda act_node: act_node[1]._n_visits)[0]
 
     def update_with_move(self, last_move):
-        """Step forward in the tree, keeping everything we already know
+        """
+        Step forward in the tree, keeping everything we already know
         about the subtree.
         """
         if last_move in self._root._children:

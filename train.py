@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 An implementation of the training pipeline of AlphaZero for Gomoku
-
-@author: Junxiao Song
 """
 
 from __future__ import print_function
@@ -12,18 +10,17 @@ from collections import defaultdict, deque
 from game import Board, Game
 from mcts_pure import MCTSPlayer as MCTS_Pure
 from mcts_alphaZero import MCTSPlayer
-# from policy_value_net import PolicyValueNet  # Theano and Lasagne
 from policy_value_net_pytorch import PolicyValueNet  # Pytorch
-# from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
-# from policy_value_net_keras import PolicyValueNet # Keras
+
 
 
 class TrainPipeline():
-    def __init__(self, init_model=None):
+    def __init__(self, board_width=9, board_height=9, n_in_row=5, init_model=None, is_gpu=None):
         # params of the board and the game
-        self.board_width = 6
-        self.board_height = 6
-        self.n_in_row = 4
+        self.board_width = board_width
+        self.board_height = board_height
+        self.n_in_row = n_in_row
+        self.is_gpu = is_gpu
         self.board = Board(width=self.board_width,
                            height=self.board_height,
                            n_in_row=self.n_in_row)
@@ -50,18 +47,19 @@ class TrainPipeline():
             # start training from an initial policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
-                                                   model_file=init_model)
+                                                   model_file=init_model, use_gpu=is_gpu)
         else:
             # start training from a new policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
+                                                   self.board_height, use_gpu=is_gpu)
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn,
                                       c_puct=self.c_puct,
                                       n_playout=self.n_playout,
                                       is_selfplay=1)
 
     def get_equi_data(self, play_data):
-        """augment the data set by rotation and flipping
+        """
+        augment the data set by rotation and flipping
         play_data: [(state, mcts_prob, winner_z), ..., ...]
         """
         extend_data = []
@@ -85,6 +83,7 @@ class TrainPipeline():
     def collect_selfplay_data(self, n_games=1):
         """collect self-play data for training"""
         for i in range(n_games):
+            # play with MCTS player
             winner, play_data = self.game.start_self_play(self.mcts_player,
                                                           temp=self.temp)
             play_data = list(play_data)[:]
@@ -99,14 +98,18 @@ class TrainPipeline():
         state_batch = [data[0] for data in mini_batch]
         mcts_probs_batch = [data[1] for data in mini_batch]
         winner_batch = [data[2] for data in mini_batch]
+        # save the old_probs, old_v before update
         old_probs, old_v = self.policy_value_net.policy_value(state_batch)
         for i in range(self.epochs):
+            # every time tune parameters and return loss, entropy
             loss, entropy = self.policy_value_net.train_step(
                     state_batch,
                     mcts_probs_batch,
                     winner_batch,
                     self.learn_rate*self.lr_multiplier)
+            # get new probability and state value form state
             new_probs, new_v = self.policy_value_net.policy_value(state_batch)
+            # calculate the loss difference before and after the update
             kl = np.mean(np.sum(old_probs * (
                     np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)),
                     axis=1)
@@ -164,7 +167,10 @@ class TrainPipeline():
 
     def run(self):
         """run the training pipeline"""
+        print("Start training.")
+        print("GPU is {}.".format("on" if self.is_gpu else "off"))
         try:
+            # train game_batch_num times, each batch with play_batch_size
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
                 print("batch i:{}, episode_len:{}".format(
@@ -191,5 +197,5 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline()
+    training_pipeline = TrainPipeline(is_gpu=True)
     training_pipeline.run()

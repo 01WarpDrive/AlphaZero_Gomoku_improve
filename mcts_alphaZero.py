@@ -2,8 +2,6 @@
 """
 Monte Carlo Tree Search in AlphaGo Zero style, which uses a policy-value
 network to guide the tree search and evaluate the leaf nodes
-
-@author: Junxiao Song
 """
 
 import numpy as np
@@ -11,19 +9,29 @@ import copy
 
 
 def softmax(x):
+    """
+    Perform softmax operations on the input vector to convert it into a probability distribution.
+    x: (numpy.ndarray)
+    probs: (numpy.ndarray)
+    """
     probs = np.exp(x - np.max(x))
     probs /= np.sum(probs)
     return probs
 
 
 class TreeNode(object):
-    """A node in the MCTS tree.
-
+    """
+    A node in the MCTS tree.
     Each node keeps track of its own value Q, prior probability P, and
     its visit-count-adjusted prior score u.
     """
 
     def __init__(self, parent, prior_p):
+        """
+        _n_visits: node access times/ number of node simulations
+        _Q: part 1 of the value function of MCTS
+        _u: part 2 of the value function of MCTS
+        """
         self._parent = parent
         self._children = {}  # a map from action to TreeNode
         self._n_visits = 0
@@ -32,7 +40,9 @@ class TreeNode(object):
         self._P = prior_p
 
     def expand(self, action_priors):
-        """Expand tree by creating new children.
+        """
+        Expansion: 
+        Expand tree by creating new children for leaf node.
         action_priors: a list of tuples of actions and their prior probability
             according to the policy function.
         """
@@ -41,15 +51,17 @@ class TreeNode(object):
                 self._children[action] = TreeNode(self, prob)
 
     def select(self, c_puct):
-        """Select action among children that gives maximum action value Q
-        plus bonus u(P).
+        """
+        Selection:
+        Select action among children that gives maximum UCT.
         Return: A tuple of (action, next_node)
         """
         return max(self._children.items(),
                    key=lambda act_node: act_node[1].get_value(c_puct))
 
     def update(self, leaf_value):
-        """Update node values from leaf evaluation.
+        """
+        Update node values from leaf evaluation.
         leaf_value: the value of subtree evaluation from the current player's
             perspective.
         """
@@ -59,7 +71,9 @@ class TreeNode(object):
         self._Q += 1.0*(leaf_value - self._Q) / self._n_visits
 
     def update_recursive(self, leaf_value):
-        """Like a call to update(), but applied recursively for all ancestors.
+        """
+        Backpropagation: 
+        Like a call to update(), but applied recursively for all ancestors.
         """
         # If it is not root, this node's parent should be updated first.
         if self._parent:
@@ -67,9 +81,9 @@ class TreeNode(object):
         self.update(leaf_value)
 
     def get_value(self, c_puct):
-        """Calculate and return the value for this node.
-        It is a combination of leaf evaluations Q, and this node's prior
-        adjusted for its visit count, u.
+        """
+        Calculate and return the UCT value for this node.
+        UCT value = leaf evaluations Q + this node's prior adjusted for its visit count
         c_puct: a number in (0, inf) controlling the relative impact of
             value Q, and prior probability P, on this node's score.
         """
@@ -78,7 +92,9 @@ class TreeNode(object):
         return self._Q + self._u
 
     def is_leaf(self):
-        """Check if leaf node (i.e. no nodes below this have been expanded)."""
+        """
+        Check if leaf node (i.e. no nodes below this have been expanded).
+        """
         return self._children == {}
 
     def is_root(self):
@@ -88,7 +104,7 @@ class TreeNode(object):
 class MCTS(object):
     """An implementation of Monte Carlo Tree Search."""
 
-    def __init__(self, policy_value_fn, c_puct=5, n_playout=10000):
+    def __init__(self, policy_value_fn, c_puct=5, n_playout=2000):
         """
         policy_value_fn: a function that takes in a board state and outputs
             a list of (action, probability) tuples and also a score in [-1, 1]
@@ -104,7 +120,8 @@ class MCTS(object):
         self._n_playout = n_playout
 
     def _playout(self, state):
-        """Run a single playout from the root to the leaf, getting a value at
+        """
+        Run a single playout from the root to the leaf, getting a value at
         the leaf and propagating it back through its parents.
         State is modified in-place, so a copy must be provided.
         """
@@ -137,7 +154,8 @@ class MCTS(object):
         node.update_recursive(-leaf_value)
 
     def get_move_probs(self, state, temp=1e-3):
-        """Run all playouts sequentially and return the available actions and
+        """
+        Run all playouts sequentially and return the available actions and
         their corresponding probabilities.
         state: the current game state
         temp: temperature parameter in (0, 1] controls the level of exploration
@@ -155,7 +173,8 @@ class MCTS(object):
         return acts, act_probs
 
     def update_with_move(self, last_move):
-        """Step forward in the tree, keeping everything we already know
+        """
+        Step forward in the tree, keeping everything we already know
         about the subtree.
         """
         if last_move in self._root._children:
@@ -169,7 +188,7 @@ class MCTS(object):
 
 
 class MCTSPlayer(object):
-    """AI player based on MCTS"""
+    """AI player based on MCTS (alphaGo Zero)"""
 
     def __init__(self, policy_value_function,
                  c_puct=5, n_playout=2000, is_selfplay=0):
@@ -190,8 +209,7 @@ class MCTSPlayer(object):
             acts, probs = self.mcts.get_move_probs(board, temp)
             move_probs[list(acts)] = probs
             if self._is_selfplay:
-                # add Dirichlet Noise for exploration (needed for
-                # self-play training)
+                # add Dirichlet Noise for exploration (for self-play training)
                 move = np.random.choice(
                     acts,
                     p=0.75*probs + 0.25*np.random.dirichlet(0.3*np.ones(len(probs)))

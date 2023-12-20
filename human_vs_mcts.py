@@ -2,8 +2,6 @@
 """
 human VS mcts
 Input your move in the format: 2,3
-
-@author: Junxiao Song
 """
 
 from __future__ import print_function

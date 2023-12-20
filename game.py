@@ -153,6 +153,7 @@ class Game(object):
 
     def __init__(self, board, **kwargs):
         self.board = board
+        self.pure_mcts_playout_num = 200
 
     def graphic(self, board, player1, player2):
         """
@@ -245,3 +246,36 @@ class Game(object):
                     else:
                         print("Game end. Tie")
                 return winner, zip(states, mcts_probs, winners_z)
+
+    def policy_evaluate(self, n_games=10):
+        """
+        Evaluate the trained policy by playing against the pure MCTS player
+        Note: this is only for monitoring the progress of training
+        """
+        current_mcts_player = MCTS_Pure(c_puct=5,
+                                     n_playout=self.pure_mcts_playout_num)
+
+        pure_mcts_player = MCTS_Pure(c_puct=5,
+                                     n_playout=self.pure_mcts_playout_num)
+        win_cnt = defaultdict(int)
+        for i in range(n_games):
+            winner = self.start_play(current_mcts_player,
+                                          pure_mcts_player,
+                                          start_player=i % 2,
+                                          is_shown=1)
+            win_cnt[winner] += 1
+        win_ratio = 1.0*(win_cnt[1] + 0.5*win_cnt[-1]) / n_games
+        print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(
+                self.pure_mcts_playout_num,
+                win_cnt[1], win_cnt[2], win_cnt[-1]))
+        return win_ratio
+
+if __name__ == '__main__':
+    board_width = 9
+    board_height = 9
+    n_in_row = 5
+    board = Board(width=board_width,
+                       height=board_height,
+                       n_in_row=n_in_row)
+    task = Game(board)
+    task.policy_evaluate(n_games=10)
