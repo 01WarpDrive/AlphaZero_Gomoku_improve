@@ -137,6 +137,7 @@ class MCTS(object):
         # (action, probability) tuples p and also a score v in [-1, 1]
         # for the current player.
         action_probs, leaf_value = self._policy(state)
+        leaf_value = leaf_value.cpu().numpy()
         # Check for end of game.
         end, winner = state.game_end()
         if not end:

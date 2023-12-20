@@ -222,5 +222,5 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline(is_gpu=False)
+    training_pipeline = TrainPipeline(is_gpu=True)
     training_pipeline.run()
