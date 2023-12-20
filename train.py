@@ -13,6 +13,19 @@ from mcts_alphaZero import MCTSPlayer
 from policy_value_net_pytorch import PolicyValueNet  # Pytorch
 
 
+train_process_path = "./model/train_process.txt"
+evaluate_path = "./model/evaluate.txt"
+batch_path = "./model/batch.txt"
+
+# clear file
+with open(train_process_path, 'w') as file:
+    pass
+with open(evaluate_path, 'w') as file:
+    pass
+with open(batch_path, 'w') as file:
+    pass
+
+
 
 class TrainPipeline():
     def __init__(self, board_width=9, board_height=9, n_in_row=5, init_model=None, is_gpu=None):
@@ -128,7 +141,8 @@ class TrainPipeline():
         explained_var_new = (1 -
                              np.var(np.array(winner_batch) - new_v.flatten()) /
                              np.var(np.array(winner_batch)))
-        print(("kl:{:.5f},"
+        # record the training process: loss, entropy
+        out_txt = ("kl:{:.5f},"
                "lr_multiplier:{:.3f},"
                "loss:{},"
                "entropy:{},"
@@ -139,7 +153,10 @@ class TrainPipeline():
                         loss,
                         entropy,
                         explained_var_old,
-                        explained_var_new))
+                        explained_var_new)
+        with open(train_process_path, 'a') as wf:
+            wf.write(out_txt)
+        print(out_txt)
         return loss, entropy
 
     def policy_evaluate(self, n_games=10):
@@ -160,9 +177,13 @@ class TrainPipeline():
                                           is_shown=0)
             win_cnt[winner] += 1
         win_ratio = 1.0*(win_cnt[1] + 0.5*win_cnt[-1]) / n_games
-        print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(
+        # record the evaluating result
+        out_txt = "num_playouts:{}, win: {}, lose: {}, tie:{}".format(
                 self.pure_mcts_playout_num,
-                win_cnt[1], win_cnt[2], win_cnt[-1]))
+                win_cnt[1], win_cnt[2], win_cnt[-1])
+        with open(evaluate_path, 'a') as wf:
+            wf.write(out_txt)
+        print(out_txt)
         return win_ratio
 
     def run(self):
@@ -173,8 +194,12 @@ class TrainPipeline():
             # train game_batch_num times, each batch with play_batch_size
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
-                print("batch i:{}, episode_len:{}".format(
-                        i+1, self.episode_len))
+                # record the batch result
+                out_txt = "batch i:{}, episode_len:{}".format(
+                        i+1, self.episode_len)
+                with open(batch_path, 'a') as wf:
+                    wf.write(out_txt)
+                print(out_txt)
                 if len(self.data_buffer) > self.batch_size:
                     loss, entropy = self.policy_update()
                 # check the performance of the current model,
@@ -197,5 +222,5 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline(is_gpu=True)
+    training_pipeline = TrainPipeline(is_gpu=False)
     training_pipeline.run()

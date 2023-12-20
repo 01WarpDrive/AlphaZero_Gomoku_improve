@@ -80,6 +80,8 @@ class PolicyValueNet():
         input: a batch of states
         output: a batch of action probabilities and state values
         """
+        # converting the list to a single numpy.ndarray
+        state_batch = np.array(state_batch)
         if self.use_gpu:
             state_batch = Variable(torch.FloatTensor(state_batch).cuda())
             log_act_probs, value = self.policy_value_net(state_batch)
@@ -115,6 +117,10 @@ class PolicyValueNet():
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):
         """perform a training step"""
         # wrap in Variable
+        # converting the list to a single numpy.ndarray
+        state_batch = np.array(state_batch)
+        mcts_probs = np.array(mcts_probs)
+        winner_batch = np.array(winner_batch)
         if self.use_gpu:
             state_batch = Variable(torch.FloatTensor(state_batch).cuda())
             mcts_probs = Variable(torch.FloatTensor(mcts_probs).cuda())
