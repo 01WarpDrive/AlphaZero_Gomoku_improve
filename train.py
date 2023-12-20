@@ -10,7 +10,7 @@ from collections import defaultdict, deque
 from game import Board, Game
 from mcts_pure import MCTSPlayer as MCTS_Pure
 from mcts_alphaZero import MCTSPlayer
-from policy_value_net_pytorch import PolicyValueNet  # Pytorch
+from policy_value_net_pytorch import PolicyValueNet
 
 
 train_process_path = "./model/train_process.txt"
@@ -155,7 +155,7 @@ class TrainPipeline():
                         explained_var_old,
                         explained_var_new)
         with open(train_process_path, 'a') as wf:
-            wf.write(out_txt)
+            wf.write(out_txt + "\n")
         print(out_txt)
         return loss, entropy
 
@@ -182,7 +182,7 @@ class TrainPipeline():
                 self.pure_mcts_playout_num,
                 win_cnt[1], win_cnt[2], win_cnt[-1])
         with open(evaluate_path, 'a') as wf:
-            wf.write(out_txt)
+            wf.write(out_txt + "\n")
         print(out_txt)
         return win_ratio
 
@@ -198,7 +198,7 @@ class TrainPipeline():
                 out_txt = "batch i:{}, episode_len:{}".format(
                         i+1, self.episode_len)
                 with open(batch_path, 'a') as wf:
-                    wf.write(out_txt)
+                    wf.write(out_txt + "\n")
                 print(out_txt)
                 if len(self.data_buffer) > self.batch_size:
                     loss, entropy = self.policy_update()
