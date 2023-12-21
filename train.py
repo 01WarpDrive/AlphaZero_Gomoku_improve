@@ -47,11 +47,11 @@ class TrainPipeline():
         self.buffer_size = 10000
         self.batch_size = 512  # mini-batch size for training
         self.data_buffer = deque(maxlen=self.buffer_size)
-        self.play_batch_size = 1
+        self.play_batch_size = 1 # self-play times each epoch
         self.epochs = 5  # num of train_steps for each update
         self.kl_targ = 0.02
         self.check_freq = 50
-        self.game_batch_num = 1500
+        self.game_batch_num = 1500 # num of train epoch
         self.best_win_ratio = 0.0
         # num of simulations used for the pure mcts, which is used as
         # the opponent to evaluate the trained policy
@@ -65,6 +65,7 @@ class TrainPipeline():
             # start training from a new policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height, use_gpu=is_gpu)
+        # AlphaZero player with current policy value net
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn,
                                       c_puct=self.c_puct,
                                       n_playout=self.n_playout,
@@ -94,7 +95,10 @@ class TrainPipeline():
         return extend_data
 
     def collect_selfplay_data(self, n_games=1):
-        """collect self-play data for training"""
+        """
+        collect self-play data for training
+        play n_games times
+        """
         for i in range(n_games):
             # play with MCTS player
             winner, play_data = self.game.start_self_play(self.mcts_player,
@@ -192,6 +196,7 @@ class TrainPipeline():
         print("GPU is {}.".format("on" if self.is_gpu else "off"))
         try:
             # train game_batch_num times, each batch with play_batch_size
+            # self-play times = game_batch_num * play_batch_size
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
                 # record the batch result
@@ -222,5 +227,5 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline(is_gpu=True)
+    training_pipeline = TrainPipeline(init_model='./model/current_policy.model', is_gpu=True)
     training_pipeline.run()

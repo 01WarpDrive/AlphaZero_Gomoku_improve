@@ -2,6 +2,8 @@ from __future__ import print_function
 import numpy as np
 from mcts_pure import MCTSPlayer as MCTS_Pure
 from collections import defaultdict, deque
+from mcts_alphaZero import MCTSPlayer
+from policy_value_net_pytorch import PolicyValueNet
 
 class Board(object):
     """board for the game"""
@@ -252,8 +254,9 @@ class Game(object):
         Evaluate the trained policy by playing against the pure MCTS player
         Note: this is only for monitoring the progress of training
         """
-        current_mcts_player = MCTS_Pure(c_puct=5,
-                                     n_playout=self.pure_mcts_playout_num)
+
+        best_policy = PolicyValueNet(board.width, board.height, model_file = './model/best_policy.model')
+        current_mcts_player = MCTSPlayer(best_policy.policy_value_fn, c_puct=board.n_in_row, n_playout=self.pure_mcts_playout_num)
 
         pure_mcts_player = MCTS_Pure(c_puct=5,
                                      n_playout=self.pure_mcts_playout_num)
@@ -263,6 +266,12 @@ class Game(object):
                                           pure_mcts_player,
                                           start_player=i % 2,
                                           is_shown=1)
+            
+            # debug
+            if winner == 2:
+                break
+
+
             win_cnt[winner] += 1
         win_ratio = 1.0*(win_cnt[1] + 0.5*win_cnt[-1]) / n_games
         print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(

@@ -47,16 +47,16 @@ def run(model_file, width=9, height=9, n=5, player1=0, player2=1):
         best_policy = PolicyValueNet(width, height, model_file = model_file)
 
         # load player
-        ai_player = MCTSPlayer(best_policy.policy_value_fn, c_puct=5, n_playout=400)
-        mcts_player = MCTS_Pure(c_puct=5, n_playout=400)
+        ai_player = MCTSPlayer(best_policy.policy_value_fn, c_puct=5, n_playout=200)
+        mcts_player = MCTS_Pure(c_puct=5, n_playout=200)
         human = Human() # human player, input your move in the format: 2,3
         players = [ai_player, mcts_player, human]
 
-        game.start_play(players[player1], players[player2], start_player=1, is_shown=1)
+        game.start_play(players[player1], players[player2], start_player=0, is_shown=1)
     except KeyboardInterrupt:
         print('\n\rquit')
 
 
 if __name__ == '__main__':
     # 0-ai_player, 1-mcts_player, 2-human
-    run('best_policy_8_8_5_pytorch.model', 8, 8, player1=1, player2=2)
+    run('./model/best_policy.model', 9, 9, player1=0, player2=2)
