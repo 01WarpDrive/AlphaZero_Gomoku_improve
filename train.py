@@ -111,7 +111,7 @@ class TrainPipeline():
             play_data = self.get_equi_data(play_data)
             self.data_buffer.extend(play_data)
 
-    def policy_update(self):
+    def policy_update(self, batch):
         """update the policy-value net"""
         mini_batch = random.sample(self.data_buffer, self.batch_size)
         state_batch = [data[0] for data in mini_batch]
@@ -148,13 +148,16 @@ class TrainPipeline():
                              np.var(np.array(winner_batch) - new_v.flatten()) /
                              np.var(np.array(winner_batch)))
         # record the training process: loss, entropy
-        out_txt = ("kl:{:.5f},"
+        out_txt = (
+               "batch:{},"
+               "kl:{:.5f},"
                "lr_multiplier:{:.3f},"
                "loss:{},"
                "entropy:{},"
                "explained_var_old:{:.3f},"
                "explained_var_new:{:.3f}"
-               ).format(kl,
+               ).format(batch,
+                        kl,
                         self.lr_multiplier,
                         loss,
                         entropy,
@@ -208,7 +211,7 @@ class TrainPipeline():
                     wf.write(out_txt + "\n")
                 print(out_txt)
                 if len(self.data_buffer) > self.batch_size:
-                    loss, entropy = self.policy_update()
+                    loss, entropy = self.policy_update(i)
                 # check the performance of the current model,
                 # and save the model params
                 if (i+1) % self.check_freq == 0:
@@ -229,5 +232,5 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline(init_model='best_policy_0.model', is_gpu=True)
+    training_pipeline = TrainPipeline(is_gpu=True)
     training_pipeline.run()
