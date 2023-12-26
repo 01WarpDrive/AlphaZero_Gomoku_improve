@@ -1,0 +1,9 @@
+kl:0.21465,lr_multiplier:0.667,loss:2.985517978668213,entropy:2.0665769577026367,explained_var_old:-0.203,explained_var_new:0.102
+kl:0.14689,lr_multiplier:0.444,loss:2.3742265701293945,entropy:1.8187992572784424,explained_var_old:0.025,explained_var_new:0.113
+kl:0.11548,lr_multiplier:0.296,loss:2.226748466491699,entropy:1.7438013553619385,explained_var_old:0.076,explained_var_new:0.291
+kl:0.09339,lr_multiplier:0.198,loss:1.9798945188522339,entropy:1.6862229108810425,explained_var_old:0.280,explained_var_new:0.461
+kl:0.04592,lr_multiplier:0.132,loss:1.8657493591308594,entropy:1.7739554643630981,explained_var_old:0.475,explained_var_new:0.584
+kl:0.01711,lr_multiplier:0.132,loss:1.9129455089569092,entropy:1.7578948736190796,explained_var_old:0.420,explained_var_new:0.493
+kl:0.02063,lr_multiplier:0.132,loss:1.76119863986969,entropy:1.6623389720916748,explained_var_old:0.551,explained_var_new:0.614
+kl:0.01974,lr_multiplier:0.132,loss:1.6138179302215576,entropy:1.634145975112915,explained_var_old:0.602,explained_var_new:0.687
+kl:0.02064,lr_multiplier:0.132,loss:1.7250645160675049,entropy:1.5881315469741821,explained_var_old:0.552,explained_var_new:0.601
