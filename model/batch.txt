@@ -1,2 +1,0 @@
-batch i:1, episode_len:30
-batch i:2, episode_len:38

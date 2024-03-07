@@ -1,1 +1,0 @@
-batch:1,kl:0.14986,lr_multiplier:0.667,loss:4.560894012451172,entropy:4.328948497772217,explained_var_old:-0.026,explained_var_new:0.997

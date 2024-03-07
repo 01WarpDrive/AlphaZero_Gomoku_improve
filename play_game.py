@@ -52,11 +52,11 @@ def run(model_file, width=9, height=9, n=5, player1=0, player2=1):
         human = Human() # human player, input your move in the format: 2,3
         players = [ai_player, mcts_player, human]
 
-        game.start_play(players[player1], players[player2], start_player=0, is_shown=1)
+        game.start_play(players[player1], players[player2], start_player=1, is_shown=1)
     except KeyboardInterrupt:
         print('\n\rquit')
 
 
 if __name__ == '__main__':
     # 0-ai_player, 1-mcts_player, 2-human
-    run('./model/best_policy.model', 9, 9, player1=0, player2=2)
+    run('./model/policy_2800.model', 9, 9, player1=0, player2=2)

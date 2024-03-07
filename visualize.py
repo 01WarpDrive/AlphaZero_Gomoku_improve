@@ -54,9 +54,9 @@ def plot_with_fit(lines, tag, title, ylabel, xlabel='Epoch', fit_dig=12, save_pa
     plt.close()
 
 if __name__ == "__main__":
-    train_process_path = "./model/train_process.txt"
-    evaluate_path = "./model/evaluate.txt"
-    batch_path = "./model/batch.txt"
+    train_process_path = "./final_model/train_process.txt"
+    evaluate_path = "./final_model/evaluate.txt"
+    batch_path = "./final_model/batch.txt"
     save_dir = "./visualize/"
     lines = read_txt_file(train_process_path)
 

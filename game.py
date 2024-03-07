@@ -1,31 +1,26 @@
 from __future__ import print_function
 import numpy as np
+import threading
 from mcts_pure import MCTSPlayer as MCTS_Pure
 from collections import defaultdict, deque
-from mcts_alphaZero import MCTSPlayer
-from policy_value_net_pytorch import PolicyValueNet
+from time import time
+
 
 class Board(object):
     """board for the game"""
 
     def __init__(self, **kwargs):
-        """
-        -define a 9*9 board
-        -board states stored as a dict
-        -key: move as location on the board
-        -value: player as pieces type
-        """
         self.width = int(kwargs.get('width', 9))
         self.height = int(kwargs.get('height', 9))
+        # board states stored as a dict
+        # key: move as location on the board
+        # value: player as pieces type
         self.states = {}
         # need how many pieces in a row to win
         self.n_in_row = int(kwargs.get('n_in_row', 5))
         self.players = [1, 2]  # player1 and player2
 
     def init_board(self, start_player=0):
-        """
-        -initialize the current player, available positions, state, last move
-        """
         self.current_player = self.players[start_player]  # start player
         # keep available moves in a list
         self.availables = list(range(self.width * self.height))
@@ -45,11 +40,8 @@ class Board(object):
         return [h, w]
 
     def location_to_move(self, location):
-        """
-        -location: two dimensions
-        -move: an int
-        -location -> move
-        """
+        # location: two dimensions
+        # move: an int
         if len(location) != 2:
             return -1
         h = location[0]
@@ -99,39 +91,73 @@ class Board(object):
         )
         self.last_move = move
 
+
     def has_a_winner(self):
-        """
-        check five in line
-        """
+        m = self.last_move
+        if m == -1: return False, -1
         width = self.width
         height = self.height
         states = self.states
+        player = states[m]
+        h = m // width
+        w = m % width
         n = self.n_in_row
 
-        moved = list(set(range(width * height)) - set(self.availables))
-        if len(moved) < n*2-1:
-            return False, -1
+        # from left to right
+        left, right = 0, width-1
+        for i in range(w):
+            # current = w - i - 1
+            if states.get(m-i-1, -1) != player: 
+                left = w - i
+                break
+        for i in range(width - w - 1):
+            # current = w + i + 1
+            if states.get(m+i+1, -1) != player: 
+                right = w + i
+                break
+        if right - left + 1 == n: return True, player
 
-        for m in moved:
-            h = m // width
-            w = m % width
-            player = states[m]
-            # five from left to right
-            if (w in range(width - n + 1) and
-                    len(set(states.get(i, -1) for i in range(m, m + n))) == 1):
-                return True, player
-            # five in column form bottom to top
-            if (h in range(height - n + 1) and
-                    len(set(states.get(i, -1) for i in range(m, m + n * width, width))) == 1):
-                return True, player
-            # five from bottom left to top right
-            if (w in range(width - n + 1) and h in range(height - n + 1) and
-                    len(set(states.get(i, -1) for i in range(m, m + n * (width + 1), width + 1))) == 1):
-                return True, player
-            # five from bottom right to top left
-            if (w in range(n - 1, width) and h in range(height - n + 1) and
-                    len(set(states.get(i, -1) for i in range(m, m + n * (width - 1), width - 1))) == 1):
-                return True, player
+        # from bottom to top
+        bottom, top = 0, height-1
+        for i in range(h):
+            # current = h - i - 1
+            if states.get(m - (i+1)*width, -1) != player: 
+                bottom = h - i
+                break
+        for i in range(height - h - 1):
+            current = h + i + 1
+            if states.get(m + (i+1)*width, -1) != player: 
+                top = h + i
+                break
+        if top - bottom + 1 == n: return True, player
+
+        # from bottom left to top right
+        bottom, top = 0, height-1
+        for i in range(h):
+            # current = h - i - 1
+            if states.get(m - (i+1)*width - (i+1), -1) != player: 
+                bottom = h - i
+                break
+        for i in range(height - h - 1):
+            current = h + i + 1
+            if states.get(m + (i+1)*width + (i+1), -1) != player: 
+                top = h + i
+                break
+        if top - bottom + 1 == n: return True, player
+
+        # from bottom right to top left
+        bottom, top = 0, height-1
+        for i in range(h):
+            # current = h - i - 1
+            if states.get(m - (i+1)*width + (i+1), -1) != player: 
+                bottom = h - i
+                break
+        for i in range(height - h - 1):
+            current = h + i + 1
+            if states.get(m + (i+1)*width - (i+1), -1) != player: 
+                top = h + i
+                break
+        if top - bottom + 1 == n: return True, player
 
         return False, -1
 
@@ -157,31 +183,6 @@ class Game(object):
         self.board = board
         self.pure_mcts_playout_num = 200
 
-    def graphic(self, board, player1, player2):
-        """
-        Draw the board and show game info
-        """
-        width = board.width
-        height = board.height
-
-        print("Player", player1, "with X".rjust(3))
-        print("Player", player2, "with O".rjust(3))
-        print()
-        for x in range(width):
-            print("{0:8}".format(x), end='')
-        print('\r\n')
-        for i in range(height - 1, -1, -1):
-            print("{0:4d}".format(i), end='')
-            for j in range(width):
-                loc = i * width + j
-                p = board.states.get(loc, -1)
-                if p == player1:
-                    print('X'.center(8), end='')
-                elif p == player2:
-                    print('O'.center(8), end='')
-                else:
-                    print('_'.center(8), end='')
-            print('\r\n\r\n')
 
     def start_play(self, player1, player2, start_player=0, is_shown=1):
         """
@@ -190,20 +191,44 @@ class Game(object):
         if start_player not in (0, 1):
             raise Exception('start_player should be either 0 (player1 first) '
                             'or 1 (player2 first)')
+        
+        if is_shown:
+            import utils.gui as gui
+            lock = threading.Lock()
+            gomoku_gui = gui.GomokuGUI(self.board.width, lock)
+            t = threading.Thread(target=gomoku_gui.loop)
+            t.start()
+
         self.board.init_board(start_player)
         p1, p2 = self.board.players
         player1.set_player_ind(p1)
         player2.set_player_ind(p2)
         players = {p1: player1, p2: player2}
-        if is_shown:
-            self.graphic(self.board, player1.player, player2.player)
+        
+        time_sum, playout_num = 0, 0.01
+
         while True:
             current_player = self.board.get_current_player()
             player_in_turn = players[current_player]
-            move = player_in_turn.get_action(self.board)
+            if player_in_turn.isHuman and is_shown:
+                gomoku_gui.set_is_human(True)
+                lock.acquire()
+                move = gomoku_gui.get_human_move()
+                lock.release()
+            elif player_in_turn.isAI:
+                now = time()
+                move= player_in_turn.get_action(self.board)
+                time_sum += time() - now
+                playout_num += player_in_turn.mcts._n_playout
+            else: move = player_in_turn.get_action(self.board)
+
             self.board.do_move(move)
+
             if is_shown:
-                self.graphic(self.board, player1.player, player2.player)
+                color = -1 # black
+                if current_player == 2 and start_player == 0 or current_player == 1 and start_player == 1: color = 1
+                gomoku_gui.execute_move(color, move)
+
             end, winner = self.board.game_end()
             if end:
                 if is_shown:
@@ -211,8 +236,11 @@ class Game(object):
                         print("Game end. Winner is", players[winner])
                     else:
                         print("Game end. Tie")
-                return winner
 
+                    t.join()
+
+                return winner, time_sum / playout_num
+            
     def start_self_play(self, player, is_shown=0, temp=1e-3):
         """ 
         start a self-play game using a MCTS player, reuse the search tree,
@@ -231,8 +259,8 @@ class Game(object):
             current_players.append(self.board.current_player)
             # perform a move
             self.board.do_move(move)
-            if is_shown:
-                self.graphic(self.board, p1, p2)
+            # if is_shown:
+            #     self.graphic(self.board, p1, p2)
             end, winner = self.board.game_end()
             if end:
                 # winner from the perspective of the current player of each state
@@ -248,43 +276,3 @@ class Game(object):
                     else:
                         print("Game end. Tie")
                 return winner, zip(states, mcts_probs, winners_z)
-
-    def policy_evaluate(self, n_games=10):
-        """
-        Evaluate the trained policy by playing against the pure MCTS player
-        Note: this is only for monitoring the progress of training
-        """
-
-        best_policy = PolicyValueNet(board.width, board.height, model_file = './model/best_policy.model')
-        current_mcts_player = MCTSPlayer(best_policy.policy_value_fn, c_puct=board.n_in_row, n_playout=self.pure_mcts_playout_num)
-
-        pure_mcts_player = MCTS_Pure(c_puct=5,
-                                     n_playout=self.pure_mcts_playout_num)
-        win_cnt = defaultdict(int)
-        for i in range(n_games):
-            winner = self.start_play(current_mcts_player,
-                                          pure_mcts_player,
-                                          start_player=i % 2,
-                                          is_shown=1)
-            
-            # debug
-            if winner == 2:
-                break
-
-
-            win_cnt[winner] += 1
-        win_ratio = 1.0*(win_cnt[1] + 0.5*win_cnt[-1]) / n_games
-        print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(
-                self.pure_mcts_playout_num,
-                win_cnt[1], win_cnt[2], win_cnt[-1]))
-        return win_ratio
-
-if __name__ == '__main__':
-    board_width = 9
-    board_height = 9
-    n_in_row = 5
-    board = Board(width=board_width,
-                       height=board_height,
-                       n_in_row=n_in_row)
-    task = Game(board)
-    task.policy_evaluate(n_games=10)

@@ -1,23 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Monte Carlo Tree Search in AlphaGo Zero style, which uses a policy-value
-network to guide the tree search and evaluate the leaf nodes
-"""
-
 import numpy as np
 import copy
-
-
-def softmax(x):
-    """
-    Perform softmax operations on the input vector to convert it into a probability distribution.
-    x: (numpy.ndarray)
-    probs: (numpy.ndarray)
-    """
-    probs = np.exp(x - np.max(x))
-    probs /= np.sum(probs)
-    return probs
-
+import concurrent.futures
+from utils.tools import softmax, edge_protection
 
 class TreeNode(object):
     """
@@ -100,6 +84,10 @@ class TreeNode(object):
     def is_root(self):
         return self._parent is None
 
+"""
+Monte Carlo Tree Search in AlphaGo Zero style, which uses a policy-value
+network to guide the tree search and evaluate the leaf nodes
+"""
 
 class MCTS(object):
     """An implementation of Monte Carlo Tree Search."""
@@ -154,24 +142,33 @@ class MCTS(object):
         # Update value and visit count of nodes in this traversal.
         node.update_recursive(-leaf_value)
 
+    def parallel_playout_aux(self, state):
+        state_copy = copy.deepcopy(state)
+        self._playout(state_copy)
+
     def get_move_probs(self, state, temp=1e-3):
-        """
-        Run all playouts sequentially and return the available actions and
-        their corresponding probabilities.
-        state: the current game state
-        temp: temperature parameter in (0, 1] controls the level of exploration
-        """
-        for n in range(self._n_playout):
-            state_copy = copy.deepcopy(state)
-            self._playout(state_copy)
+        # for n in range(self._n_playout):
+        #     state_copy = copy.deepcopy(state)
+        #     self._playout(state_copy)
+        
+        num_workers = 3
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = [executor.submit(self.parallel_playout_aux, state) for _ in range(self._n_playout)]
+            concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
 
         # calc the move probabilities based on visit counts at the root node
         act_visits = [(act, node._n_visits)
                       for act, node in self._root._children.items()]
         acts, visits = zip(*act_visits)
         act_probs = softmax(1.0/temp * np.log(np.array(visits) + 1e-10))
-
         return acts, act_probs
+
+    def get_new_act(self, state):
+        num_workers = 3
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = [executor.submit(self.parallel_playout_aux, state) for _ in range(self._n_playout)]
+            concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
+        return max(self._root._children.items(), key=lambda act_node: act_node[1]._n_visits)[0]                        
 
     def update_with_move(self, last_move):
         """
@@ -189,12 +186,14 @@ class MCTS(object):
 
 
 class MCTSPlayer(object):
-    """AI player based on MCTS (alphaGo Zero)"""
+    """AI player based on MCTS"""
 
     def __init__(self, policy_value_function,
                  c_puct=5, n_playout=2000, is_selfplay=0):
         self.mcts = MCTS(policy_value_function, c_puct, n_playout)
         self._is_selfplay = is_selfplay
+        self.isAI = True
+        self.isHuman = False
 
     def set_player_ind(self, p):
         self.player = p
@@ -204,27 +203,28 @@ class MCTSPlayer(object):
 
     def get_action(self, board, temp=1e-3, return_prob=0):
         sensible_moves = board.availables
-        # the pi vector returned by MCTS as in the alphaGo Zero paper
-        move_probs = np.zeros(board.width*board.height)
         if len(sensible_moves) > 0:
-            acts, probs = self.mcts.get_move_probs(board, temp)
-            move_probs[list(acts)] = probs
             if self._is_selfplay:
+                # the pi vector returned by MCTS as in the alphaGo Zero paper
+                move_probs = np.zeros(board.width*board.height)
+
+                acts, probs = self.mcts.get_move_probs(board, temp)
+                move_probs[list(acts)] = probs
                 # add Dirichlet Noise for exploration (for self-play training)
                 move = np.random.choice(
                     acts,
-                    p=0.75*probs + 0.25*np.random.dirichlet(0.2*np.ones(len(probs)))
+                    p=0.75*probs + 0.25*np.random.dirichlet(0.25*np.ones(len(probs)))
                 )
                 # update the root node and reuse the search tree
                 self.mcts.update_with_move(move)
             else:
-                # with the default temp=1e-3, it is almost equivalent
-                # to choosing the move with the highest prob
-                move = np.random.choice(acts, p=probs)
+                move = self.mcts.get_new_act(board)
                 # reset the root node
                 self.mcts.update_with_move(-1)
-#                location = board.move_to_location(move)
-#                print("AI move: %d,%d\n" % (location[0], location[1]))
+
+                # edge protection
+                new_move = edge_protection(board)
+                if new_move != -1: move = new_move
 
             if return_prob:
                 return move, move_probs
@@ -234,4 +234,4 @@ class MCTSPlayer(object):
             print("WARNING: the board is full")
 
     def __str__(self):
-        return "MCTS {}".format(self.player)
+        return "AlphaZero {}".format(self.player)

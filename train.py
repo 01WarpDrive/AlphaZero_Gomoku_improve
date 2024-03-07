@@ -10,20 +10,21 @@ from collections import defaultdict, deque
 from game import Board, Game
 from mcts_pure import MCTSPlayer as MCTS_Pure
 from mcts_alphaZero import MCTSPlayer
-from policy_value_net_pytorch import PolicyValueNet
+from network import PolicyValueNet
 
 
 train_process_path = "./model/train_process.txt"
 evaluate_path = "./model/evaluate.txt"
 batch_path = "./model/batch.txt"
 
-# clear file
-with open(train_process_path, 'w') as file:
-    pass
-with open(evaluate_path, 'w') as file:
-    pass
-with open(batch_path, 'w') as file:
-    pass
+def clear_txt():
+    # clear file
+    with open(train_process_path, 'w') as file:
+        pass
+    with open(evaluate_path, 'w') as file:
+        pass
+    with open(batch_path, 'w') as file:
+        pass
 
 
 
@@ -42,7 +43,7 @@ class TrainPipeline():
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
         self.kl_targ = 0.02
-        self.temp = 1e-3  # the temperature param
+        self.temp = 1  # the temperature param
         self.n_playout = 600  # num of simulations for each move
         self.c_puct = 6
         self.buffer_size = 10000
@@ -51,7 +52,7 @@ class TrainPipeline():
         self.play_batch_size = 1 # self-play times each epoch
         self.epochs = 5  # num of train_steps for each update
         self.check_freq = 200
-        self.game_batch_num = 3000 # num of train epoch
+        self.game_batch_num = 6000 # num of train epoch
         # num of simulations used for the pure mcts, which is used as
         # the opponent to evaluate the trained policy
         self.pure_mcts_playout_num = 200
@@ -232,5 +233,6 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline(is_gpu=True)
+    clear_txt()
+    training_pipeline = TrainPipeline(is_gpu=False)
     training_pipeline.run()

@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
-A pure implementation of the Monte Carlo Tree Search (MCTS)
-"""
 
 import numpy as np
 import copy
 from operator import itemgetter
 
+# A pure implementation of the Monte Carlo Tree Search (MCTS)
 
 def rollout_policy_fn(board):
     """
     a coarse, fast version of policy_fn used in the rollout phase.
-    random probability
     """
     # rollout randomly
     action_probs = np.random.rand(len(board.availables))
@@ -22,8 +19,8 @@ def policy_value_fn(board):
     """
     a function that takes in a state and outputs a list of (action, probability)
     tuples and a score for the state
-    -return uniform probabilities and 0 score for pure MCTS
     """
+    # return uniform probabilities and 0 score for pure MCTS
     action_probs = np.ones(len(board.availables))/len(board.availables)
     return zip(board.availables, action_probs), 0
 
@@ -35,11 +32,6 @@ class TreeNode(object):
     """
 
     def __init__(self, parent, prior_p):
-        """
-        _n_visits: node access times/ number of node simulations
-        _Q: part 1 of the value function of MCTS
-        _u: part 2 of the value function of MCTS
-        """
         self._parent = parent
         self._children = {}  # a map from action to TreeNode
         self._n_visits = 0
@@ -49,7 +41,6 @@ class TreeNode(object):
 
     def expand(self, action_priors):
         """
-        Expansion: 
         Expand tree by creating new children for leaf node.
         action_priors: a list of tuples of actions and their prior probability
             according to the policy function.
@@ -60,7 +51,6 @@ class TreeNode(object):
 
     def select(self, c_puct):
         """
-        Selection:
         Select action among children that gives maximum UCT.
         Return: A tuple of (action, next_node)
         """
@@ -80,7 +70,6 @@ class TreeNode(object):
 
     def update_recursive(self, leaf_value):
         """
-        Backpropagation: 
         Like a call to update(), but applied recursively for all ancestors.
         """
         # If it is not root, this node's parent should be updated first.
@@ -130,7 +119,7 @@ class MCTS(object):
 
     def _playout(self, state):
         """
-        Selection: Run a single playout from the root to the leaf, getting a value at
+        Run a single playout from the root to the leaf, getting a value at
         the leaf and propagating it back through its parents.
         State is modified in-place, so a copy must be provided.
         """
@@ -155,7 +144,7 @@ class MCTS(object):
 
     def _evaluate_rollout(self, state, limit=1000):
         """
-        Simulation: Use the rollout policy to play until the end of the game,
+        Use the rollout policy to play until the end of the game,
         returning +1 if the current player wins, -1 if the opponent wins,
         and 0 if it is a tie.
         """
@@ -177,7 +166,7 @@ class MCTS(object):
 
     def get_move(self, state):
         """
-        MCTS decision: Runs all playouts sequentially and returns the most visited action.
+        Runs all playouts sequentially and returns the most visited action.
         state: the current game state
 
         Return: the selected action
@@ -207,17 +196,13 @@ class MCTSPlayer(object):
     """AI player based on MCTS"""
     def __init__(self, c_puct=5, n_playout=2000):
         self.mcts = MCTS(policy_value_fn, c_puct, n_playout)
+        self.isHuman = False
+        self.isAI = False
 
     def set_player_ind(self, p):
-        """
-        set the player
-        """
         self.player = p
 
     def reset_player(self):
-        """
-        reset the data of MCTSPlayer
-        """
         self.mcts.update_with_move(-1)
 
     def get_action(self, board):
@@ -230,4 +215,4 @@ class MCTSPlayer(object):
             print("WARNING: the board is full")
 
     def __str__(self):
-        return "MCTS {}".format(self.player)
+        return "pure MCTS {}".format(self.player)
